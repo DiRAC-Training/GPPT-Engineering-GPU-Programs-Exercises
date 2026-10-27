@@ -1,4 +1,5 @@
 #include <chrono>
+#include <cmath>
 #include <cstdio>
 #include <vector>
 
@@ -14,13 +15,13 @@ public:
   }
 
   double timeSince(int mark) {
-    return duration_cast<std::chrono::milliseconds>(steady_clock::now() -
+    return duration_cast<std::chrono::microseconds>(steady_clock::now() -
                                                     marks[mark])
         .count();
   }
 
   double timeBetween(int start, int end) {
-    return duration_cast<std::chrono::milliseconds>(marks[end] - marks[start])
+    return duration_cast<std::chrono::microseconds>(marks[end] - marks[start])
         .count();
   }
 
@@ -48,30 +49,34 @@ private:
   double curr;
 };
 
+float calculate(int N) {
+  float result = 0.0f;
+  for (int i = 0; i < N; i++) {
+    result += std::sin(i * M_PI / N);
+  }
+  return result;
+}
+
 int main() {
+  const int N = 1'000'000;
+
   {
-    Timer timer;
+    MarkTimer timer;
 
     int initTimerMark = timer.mark();
-
-    for (int i = 0; i < 1000000000; i++) {
-      int j = i + 10000;
-    }
-
+    float result = calculate(N);
     int finalTimerMark = timer.mark();
 
     printf("Time since beginning (ms): %f\n", timer.timeSince(initTimerMark));
     printf("Time in loop (ms): %f\n",
            timer.timeBetween(initTimerMark, finalTimerMark));
+    printf("Result: %f\n", result);
   }
 
   {
-    LapTimer<std::chrono::milliseconds> timer;
-
-    for (int i = 0; i < 1000000000; i++) {
-      int j = i + 10000;
-    }
-
+    LapTimer<std::chrono::microseconds> timer;
+    float result = calculate(N);
     printf("Time in loop (ms): %f\n", timer.lap());
+    printf("Result: %f\n", result);
   }
 }

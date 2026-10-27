@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-g++ ./timer.cpp -o timer && ./timer
+g++ -O3 ./timer.cpp -o timer && ./timer
