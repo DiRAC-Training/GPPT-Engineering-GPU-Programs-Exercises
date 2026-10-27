@@ -1,8 +1,35 @@
-#include "timer.cuh"
 #include <cstdio>
 #include <ctime>
 #include <cuda.h>
 #include <cuda_runtime.h>
+
+class CUDATimer {
+public:
+  CUDATimer() {
+    cudaEventCreate(&start);
+    cudaEventCreate(&end);
+    cudaEventRecord(start);
+  }
+
+  ~CUDATimer() {
+    cudaEventDestroy(start);
+    cudaEventDestroy(end);
+  }
+
+  void reset() { cudaEventRecord(start); }
+
+  float lap_ms() {
+    cudaEventRecord(end);
+    cudaEventSynchronize(end);
+    float diff_ms = 0.0f;
+    cudaEventElapsedTime(&diff_ms, start, end);
+    reset();
+    return diff_ms;
+  }
+
+private:
+  cudaEvent_t start, end;
+};
 
 __global__ void vecAdd(float *A, float *B, float *C, int vectorLength) {
   int workIndex = threadIdx.x + blockIdx.x * blockDim.x;
