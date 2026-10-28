@@ -15,63 +15,35 @@ With so much duplication between the files, it's natural for us to consider how 
 
 ## Single source with preprocessor guards
 
-**Directory:** `single_source/`
+**File:** `single_source/signal_smooth.c`
 
 The three differences listed above are all small, self-contained pieces of code: a different header, a different allocator, a different deallocator. These differences are small enough that we can choose to keep all code in a single file and use `#ifdef` guards to switch between the two code paths at compile time.
 
-The merged file `signal_smooth.c` introduces a single preprocessor symbol, `USE_GPU`, and wraps each of the three differences in an `#ifdef` block:
+**Read the file to find the five uses of `USE_GPU`.**
 
-```c
-/* 1. Header selection */
-#ifdef USE_GPU
-#include <cufftw.h>
-#else
-#include <fftw3.h>
-#endif
-```
+---
 
-```c
-/* 2. Complex array allocation in convolve_fft */
-#ifdef USE_GPU
-    fftw_complex *sig_freq = (fftw_complex *)malloc(sizeof(fftw_complex) * (n/2 + 1));
-    fftw_complex *ker_freq = (fftw_complex *)malloc(sizeof(fftw_complex) * (n/2 + 1));
-#else
-    fftw_complex *sig_freq = fftw_alloc_complex(n/2 + 1);
-    fftw_complex *ker_freq = fftw_alloc_complex(n/2 + 1);
-#endif
-```
+**Do you foresee any problems with maintain a code written in this way?**
 
-```c
-/* 3. Real array allocation and deallocation in main */
-#ifdef USE_GPU
-    double *signal = (double *)malloc(sizeof(double) * N);
-    /* ... */
-#else
-    double *signal = fftw_alloc_real(N);
-    /* ... */
-#endif
+<details>
+<summary>Show answer</summary>
 
-    /* code body */
+The main disadvantages of this method are:
 
-#ifdef USE_GPU
-    free(signal);
-    /* ... */
-#else
-    fftw_free(signal);
-    /* ... */
-#endif
+- It's easy to forget to wrap each relevant call in the `USE_GPU` guard, and the resultant error may not be useful.
+- The code becomes cluttered with details of allocation / deallocation. Supporting different hardware or libraries could make this even worse.
+- Instead of writing allocations with one line, you must write the entire block of portable allocations, slowing down development time.
 
-```
-
-Everything else is identical between the two targets.
-
-This approach works well here precisely because the guarded blocks are small and few. If the differences between targets were more extensive, these blocks would grow and become difficult to read and maintain, at which point refactoring the code would then become more appealing.
+</details>
 
 ### Building with Make
 
-The Makefile needs to do two things: pass the `USE_GPU` preprocessor symbol to the compiler when GPU support is requested, and link against the correct library. Following [Setting preprocessor symbols from the build system](../../docs/60_Architecture_1.md#setting-preprocessor-symbols-from-the-build-system), the `ifdef` block checks whether the developer has set `USE_GPU` on the command line. If so, it appends `-DUSE_GPU` to the compiler flags, which is equivalent to adding `#define USE_GPU` at the top of the source file. The library flags are set accordingly — cuFFTW and cuFFT for the GPU path, FFTW3 for the CPU path — following the [Conditional library linking](../../docs/60_Architecture_1.md#conditional-library-linking) pattern.
+The Makefile needs to do two things:
 
-Unlike CMake, Make has no built-in package discovery, so the GPU include and library paths must be provided explicitly. Here we use `NVHPC_ROOT`, which is set by the HPC module on most systems with the NVIDIA HPC SDK installed:
+1. pass the `USE_GPU` preprocessor symbol to the compiler when appropriate, and
+2. link against the correct FFT library.
+
+This is done in the following block:
 
 ```makefile
 ifdef USE_GPU
@@ -82,19 +54,16 @@ else
 endif
 ```
 
-The build rule itself is a single line that compiles and links `signal_smooth.c` with the selected flags and libraries. The entire Makefile is fewer than 20 lines — the conditional block is the only GPU-specific logic:
+Now we can build the CPU and GPU versions with:
 
 ```bash
-# CPU version (FFTW) — no symbol required, defaults to CPU
 make
-
-# GPU version (cuFFTW) — pass USE_GPU to trigger the ifdef block
 make USE_GPU=1
 ```
 
 ### Building with CMake
 
-The CMakeLists.txt follows the same logic as the Makefile but uses CMake's built-in mechanisms for option handling, package discovery and target configuration. The `option()` command exposes `USE_GPU` as a configurable build setting, defaulting to `OFF`. When enabled, `find_package(CUDAToolkit)` locates the CUDA installation and `target_compile_definitions` passes the `USE_GPU` symbol to the compiler — the CMake equivalent of the `-DUSE_GPU` flag in the Makefile. The library linking uses CMake's imported targets (`CUDA::cufftw`, `CUDA::cufft`) rather than raw linker flags, as described in [Conditional library linking](../../docs/60_Architecture_1.md#conditional-library-linking):
+The CMakeLists.txt follows the same logic as the Makefile but uses CMake's built-in mechanisms for option handling, package discovery and target configuration. The `option()` command exposes `USE_GPU` as a configurable build setting, defaulting to `OFF`. When enabled, `find_package(CUDAToolkit)` locates the CUDA installation and `target_compile_definitions` passes the `USE_GPU` symbol to the compiler — the CMake equivalent of the `-DUSE_GPU` flag in the Makefile. The library linking uses CMake's imported targets (`CUDA::cufftw`, `CUDA::cufft`) rather than raw linker flags:
 
 ```cmake
 option(USE_GPU "Build with GPU support using cuFFTW" OFF)
@@ -114,7 +83,7 @@ else()
 endif()
 ```
 
-The CPU path uses the tool `pkg-config` to locate FFTW3, which is the standard discovery mechanism for this library. The build commands mirror the Make workflow — the only difference is how the option is passed:
+The build commands mirror the Make workflow — the only difference is how the option is passed:
 
 ```bash
 # CPU version
@@ -125,6 +94,37 @@ cmake --build build
 cmake -B build -DUSE_GPU=ON
 cmake --build build
 ```
+
+### Removing boilerplate with abstractions
+
+**File:** `single_source/signal_smooth_refactored_malloc.c`
+
+One of the clear disadvantages of the above approach is the amount of clutter and boilerplate it introduces whenever an allocation or deallocation is used. We can refactor this into **abstractions** of the allocations and deallocations using C macros like so:
+
+```cpp
+#ifdef USE_GPU
+#define ALLOC_COMPLEX(N) (fftw_complex *)malloc(sizeof(fftw_complex) * (N))
+#define ALLOC_REAL(N) (double *)malloc(sizeof(double) * N)
+#define FREE(PTR) free(PTR)
+#else
+#define ALLOC_COMPLEX(N) fftw_alloc_complex(N)
+#define ALLOC_REAL(N) fftw_alloc_real(N)
+#define FREE(PTR) fftw_free(PTR)
+#endif
+```
+
+**Compare `single_source/signal_smooth_refactored_malloc.c` and `single_source/signal_smooth.c` to see the difference this abstraction makes.**
+
+---
+
+**What are some obvious disadvantages to this abstraction approach?**
+
+<details>
+<summary>Show answer</summary>
+
+In this case, there's relatively little disadvantage. A macro is a good way to implement this abstraction. In C++, one could use this macro implementation, lambdas, or something more complex. This abstraction works well conceptually because all allocations and deallocations involved in this example have similar interfaces that we can hide behind a common one.
+
+</details>
 
 ## Multi-source project structure
 
@@ -165,13 +165,13 @@ Each target provides its own `convolve_fft.c` behind that interface. `cpu/convol
 
 ### The main file
 
-`main.c` contains all the shared code: signal generation, kernel creation, timing, output. It includes `convolve_fft.h` and calls `convolve_fft()` without knowing which implementation will be linked. Crucially, `main.c` has no FFT library includes or types — it compiles with a standard C compiler regardless of the target. This is the [build isolation](../../docs/60_Architecture_1.md#separating-gpu-code-into-dedicated-files) benefit described in the module: only the target-specific files require the corresponding library headers and toolchain.
+`main.c` contains all the shared code: signal generation, kernel creation, timing, output. It includes `convolve_fft.h` and calls `convolve_fft()` without knowing which implementation will be linked. Crucially, `main.c` has no FFT library includes or types — it compiles with a standard C compiler regardless of the target.
 
 Note that `main.c` uses `malloc`/`free` for the signal, kernel and result arrays rather than `fftw_alloc_real`/`fftw_free`. This is because `main.c` does not include any FFT headers, so those functions are not available. For this example the FFTW-aligned allocators are not required (they provide SIMD-aligned memory which FFTW can exploit for certain plan types, but `FFTW_ESTIMATE` plans do not benefit from this).
 
 ### Building with Make
 
-Unlike the single-source approach, the Makefile no longer needs to set preprocessor symbols — there are no `#ifdef` blocks in the code. Instead, it selects which source file to compile alongside `main.c`, following the [Selecting source files](../../docs/60_Architecture_1.md#selecting-source-files) pattern. The `ifdef` block picks the correct implementation file and links the corresponding library. As with the single-source Makefile, the GPU include and library paths are provided explicitly via `NVHPC_ROOT`:
+Unlike the single-source approach, the Makefile no longer needs to set preprocessor symbols — there are no `#ifdef` blocks in the code. Instead, it selects which source file to compile alongside `main.c`. The `ifdef` block picks the correct implementation file and links the corresponding library. As with the single-source Makefile, the GPU include and library paths are provided explicitly via `NVHPC_ROOT`:
 
 ```makefile
 ifdef USE_GPU
@@ -196,7 +196,7 @@ make USE_GPU=1
 
 ### Building with CMake
 
-The CMakeLists.txt follows the same logic. The executable is initially created with only `main.c`, then `target_sources` adds the correct implementation file based on the `USE_GPU` option. This is the CMake equivalent of selecting source files at build time, as described in [Selecting source files](../../docs/60_Architecture_1.md#selecting-source-files):
+The CMakeLists.txt follows the same logic. The executable is initially created with only `main.c`, then `target_sources` adds the correct implementation file based on the `USE_GPU` option:
 
 ```cmake
 option(USE_GPU "Build with GPU support using cuFFTW" OFF)
@@ -245,7 +245,7 @@ gnuplot ../plot_signal.gp
 
 ## Balancing the techniques
 
-Both the illustrated techniques have obvious downsides: preprocessor guards don't scale well and file restructuring to expose common interfaces can become complex if implemented prematurely. Using both these techniques throughout your code will balance the downsides and allow you to produce a codebase that is both multi-architecture, and suitably maintainable. You will find yourself refactoring and redesigning the boundaries between implementations as your code evolves. Don't be afraid to keep things architecturally simple as you develop a code. It may be valuable to wait until an obvious architecture reveals itself before making a concrete decision on how a code should be structured.
+Both the illustrated techniques have obvious downsides: preprocessor guards don't scale well, while file restructuring to expose common interfaces can become complex if implemented prematurely. Using both these techniques throughout your code will balance the downsides and allow you to produce a codebase that is both multi-architecture, and suitably maintainable. You will find yourself refactoring and redesigning the boundaries between implementations as your code evolves. Don't be afraid to keep things architecturally simple as you develop a code. It may be valuable to wait until an obvious architecture reveals itself before making a concrete decision on how a code should be structured.
 
 ## Conclusion
 

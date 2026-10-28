@@ -1,0 +1,3 @@
+*.dat
+single_source/signal_smooth
+single_source/signal_smooth_refactored_malloc
