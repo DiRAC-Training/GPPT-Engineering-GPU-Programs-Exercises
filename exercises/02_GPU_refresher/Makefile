@@ -1,5 +1,8 @@
 CXX = nvc++
 
+CUDA_PATH ?= $(NVHPC_ROOT)/cuda
+LIB_FLAGS=-L"$(CUDA_PATH)/lib" -L"$(CUDA_PATH)/lib64" -L"$(NVHPC_ROOT)/math_libs/lib64"
+
 HEADERS = $(wildcard include/*.hpp)
 
 BLOCK_SIZE ?= 128
@@ -24,7 +27,7 @@ build/%.o: src/%.cu $(HEADERS) | build
 
 # The learner's version!
 fixme: build/solver_FIXME.o build/main.o build/solution/test.o | build
-	$(CXX) -L"$(CUDA_PATH)/lib" -lcublas -lcudart $^ -o build/$@
+	$(CXX) $(LIB_FLAGS) -lcublas -lcudart $^ -o build/$@
 
 ## Solutions
 
@@ -36,16 +39,16 @@ build/solution/%.o: solution/%.cu $(HEADERS) | build
 
 # These could be made more maintainable but let's keep it simple!
 cuda: build/solution/solver_cuda.o build/solution/main.o build/solution/test.o | build
-	$(CXX) -L"$(CUDA_PATH)/lib" -lcublas -lcudart $^ -o build/$@
+	$(CXX) $(LIB_FLAGS) -lcublas -lcudart $^ -o build/$@
 
 cuda_optimised: build/solution/solver_cuda_opt.o build/solution/main.o build/solution/test.o | build
-	$(CXX) -L"$(CUDA_PATH)/lib" -lcublas -lcudart $^ -o build/$@
+	$(CXX) $(LIB_FLAGS) -lcublas -lcudart $^ -o build/$@
 
 cublas: build/solution/solver_cublas.o build/solution/main.o build/solution/test.o | build
-	$(CXX) -L"$(CUDA_PATH)/lib" -lcublas -lcudart $^ -o build/$@
+	$(CXX) $(LIB_FLAGS) -lcublas -lcudart $^ -o build/$@
 
 cublas_sym: build/solution/solver_cublas_sym.o build/solution/main.o build/solution/test.o | build
-	$(CXX) -L"$(CUDA_PATH)/lib" -lcublas -lcudart $^ -o build/$@
+	$(CXX) $(LIB_FLAGS) -lcublas -lcudart $^ -o build/$@
 
 ## Utility
 
