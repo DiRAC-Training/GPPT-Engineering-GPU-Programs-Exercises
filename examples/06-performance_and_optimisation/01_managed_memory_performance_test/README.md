@@ -1,6 +1,6 @@
 # Managed Memory vs Manual Transfers
 
-This example measures the runtime of a simple GPU operation twice, once with managed memory and once with explicit memory. The operation: fill a large array of floats with `1.0`, add `1.0` to every element on the GPU, then check the result on the CPU.
+This example measures the runtime of a simple GPU operation twice, once with managed memory and once with explicit memory. The code fills a large array of floats with `1.0`, adds `1.0` to every element on the GPU, then check the result on the CPU.
 
 ## The two versions
 
@@ -12,18 +12,13 @@ The working array is created as one buffer with `cudaMallocManaged`, so both the
 
 The working arrays are allocated separately as a CPU buffer with `malloc` and a GPU buffer with `cudaMalloc`. The data is explicitly copied to and from the device with `cudaMemcpy`.
 
-## Requirements
-
-- An NVIDIA GPU and the CUDA Toolkit (`nvcc` on your `PATH`)
-
 ## Build and run
 
 ```bash
-./build.sh
-./managed_example
+./run.sh
 ```
 
-Example output (RTX 3060 Laptop GPU, CUDA 13.4):
+Example output:
 
 ```
 Manual:  correct
@@ -34,8 +29,6 @@ Managed memory:     333.40 ms
 ```
 
 ## What is being timed?
-
-Each version is timed from start to finish with `std::chrono`, so the time covers:
 
 - allocating memory
 - filling the array on the CPU
