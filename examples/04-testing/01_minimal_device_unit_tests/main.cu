@@ -1,5 +1,6 @@
 #include "adders.cuh"
-#include <catch2/catch_test_macros.hpp>
+#include <cassert>
+#include <cstdio>
 #include <cuda_runtime.h>
 
 // We need a kernel wrapper to fetch the result from the __device__ function
@@ -20,10 +21,14 @@ unsigned int get_add_two(unsigned int number) {
   return val;
 }
 
-TEST_CASE("adders works as expected", "[cuda_functions]") {
-  REQUIRE(add_one(1) == 2);
-  REQUIRE(add_one(100) == 101);
+int main() {
+  assert(add_one(1) == 2);
+  assert(add_one(100) == 101);
 
-  REQUIRE(get_add_two(1) == 3);
-  REQUIRE(get_add_two(100) == 102);
+  assert(get_add_two(1) == 3);
+  assert(get_add_two(100) == 102);
+
+  printf("All tests passed!\n");
+
+  return 0;
 }
