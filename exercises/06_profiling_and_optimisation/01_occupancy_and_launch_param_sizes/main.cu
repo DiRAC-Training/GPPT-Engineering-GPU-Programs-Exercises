@@ -1,4 +1,5 @@
 #include <thrust/device_vector.h>
+#include <cstdio>
 #include <cstdlib>
 
 const int N = 1 << 26;
@@ -19,6 +20,8 @@ int main(int argc, char **argv) {
 
   axpy_kernel<<<n_blocks, block_size>>>(x.data().get(), y.data().get(), N);
   cudaDeviceSynchronize();
+
+  printf("Finished without error!\n");
 
   return 0;
 }
