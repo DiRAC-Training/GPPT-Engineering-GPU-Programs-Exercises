@@ -4,31 +4,15 @@
 #include <time.h>
 #include <fftw3.h>
 
-#define N (1 << 22)  /* 4,194,304 samples */
-#define KERNEL_WIDTH 127 /*Gaussian kernel width*/
+#define N (1 << 22)
+#define KERNEL_WIDTH 127
 
-/**
- * @brief Returns the current wall-clock time in seconds.
- *
- * Uses CLOCK_MONOTONIC for consistent timing measurements.
- * 
- * @return Current time in seconds (with nanosecond precision).
- */
 double get_time_sec(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return ts.tv_sec + ts.tv_nsec * 1e-9;
 }
 
-/**
- * @brief Generates a test signal: sine wave with additive noise.
- *
- * Creates a signal containing two complete sine wave periods with
- * uniformly distributed random noise added.
- *
- * @param[out] signal  Pre-allocated array to store the generated signal.
- * @param[in]  n       Number of samples to generate.
- */
 void generate_noisy_signal(double *signal, int n) {
     for (int i = 0; i < n; i++) {
         double x = (double)i / n * 4.0 * M_PI;
@@ -95,7 +79,7 @@ void convolve_fft(double *signal, double *kernel, double *result, int n) {
 
     fftw_execute(inv_result);
 
-    /* FFTW's inverse transform is unnormalized; divide by n to correct. */
+    /* Inverse transform is unnormalized; divide by n to correct. */
     for (int i = 0; i < n; i++) result[i] /= n;
 
     fftw_destroy_plan(fwd_signal);
@@ -105,17 +89,6 @@ void convolve_fft(double *signal, double *kernel, double *result, int n) {
     fftw_free(ker_freq);
 }
 
-/**
- * @brief Writes signal data to a file for plotting.
- *
- * Output format: "index original_value smoothed_value" per line.
- * Suitable for plotting with gnuplot or similar tools.
- *
- * @param[in] filename  Path to the output file.
- * @param[in] signal    Original input signal.
- * @param[in] result    Smoothed output signal.
- * @param[in] n         Number of samples.
- */
 void write_output(const char *filename, double *signal, double *result, int n) {
     FILE *f = fopen(filename, "w");
     for (int i = 0; i < n; i++) {

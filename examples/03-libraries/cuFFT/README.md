@@ -58,6 +58,14 @@ find_package(CUDAToolkit REQUIRED)
 target_link_libraries(gpu CUDA::cufftw CUDA::cufft m)
 ```
 
+## Comparing the two versions
+
+You can see the minimal number of changes required to switch between FFTW and cuFFTW by diffing the two files:
+
+```bash
+diff signal_smooth_cpu.c signal_smooth_gpu.c
+```
+
 ## Building and running
 
 ```bash
@@ -72,10 +80,6 @@ cmake --build build
 ```
 
 Both versions output timing information. On a system with a modern GPU, the GPU version should complete the FFT operations significantly faster for large problem sizes ($N = 2^{22}$ in this example).
-
-### A note on portability:
-
-The code above was ported to GPUs without portability in mind, as the GPU port no longer works on the CPU. Approaches for keeping the CPU and GPU version in the same code-base as well as cross-portability with other vendor libraries will be discussed in [TODO: Link to relevant section]().
 
 ## Visualising the output
 
