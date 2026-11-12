@@ -34,5 +34,6 @@ int main() {
             break;
         }
     }
-    if(results_match) printf("Results match!");
+
+    if(results_match) printf("Results match!\n");
 }
