@@ -75,7 +75,7 @@ Both versions output timing information. On a system with a modern GPU, the GPU 
 
 ### A note on portability:
 
-The code above was ported to GPUs without portability in mind, as the GPU port no longer works on the CPU.  Approaches for keeping the CPU and GPU version in the same code-base as well as cross-portability with other vendor libraries will be discussed in [TODO: Link to relevant section]().
+The code above was ported to GPUs without portability in mind, as the GPU port no longer works on the CPU. Approaches for keeping the CPU and GPU version in the same code-base as well as cross-portability with other vendor libraries will be discussed in [TODO: Link to relevant section]().
 
 ## Visualising the output
 
