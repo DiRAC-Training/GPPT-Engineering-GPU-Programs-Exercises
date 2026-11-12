@@ -2,12 +2,9 @@ CC ?= gcc
 CFLAGS = -O2 -Wall
 LIBS = -lm
 
-CUDA_ROOT=$(CUDA_PATH)
-# CUDA_ROOT=$(NVHPC_ROOT)/cuda
-
 ifdef USE_GPU
-  CFLAGS += -DUSE_GPU -I$(CUDA_ROOT)/include -I$(CUDA_ROOT)/math_libs/include
-  LIBS += -L$(CUDA_ROOT)/lib64 -L$(CUDA_ROOT)/math_libs/lib64 -lcufftw -lcufft
+  CFLAGS += -DUSE_GPU -I$(NVHPC_ROOT)/cuda/include -I$(NVHPC_ROOT)/math_libs/include
+  LIBS += -L$(NVHPC_ROOT)/cuda/lib64 -L$(NVHPC_ROOT)/math_libs/lib64 -lcufftw -lcufft
 else
   LIBS += -lfftw3
 endif

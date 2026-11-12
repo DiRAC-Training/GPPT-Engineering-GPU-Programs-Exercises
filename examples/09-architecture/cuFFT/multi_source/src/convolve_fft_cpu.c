@@ -1,10 +1,10 @@
 #include <stdlib.h>
-#include <cufftw.h>
-#include "../convolve_fft.h"
+#include <fftw3.h>
+#include "convolve_fft.h"
 
 void convolve_fft(double *signal, double *kernel, double *result, int n) {
-    fftw_complex *sig_freq = (fftw_complex *)malloc(sizeof(fftw_complex) * (n/2 + 1));
-    fftw_complex *ker_freq = (fftw_complex *)malloc(sizeof(fftw_complex) * (n/2 + 1));
+    fftw_complex *sig_freq = fftw_alloc_complex(n/2 + 1);
+    fftw_complex *ker_freq = fftw_alloc_complex(n/2 + 1);
 
     fftw_plan fwd_signal = fftw_plan_dft_r2c_1d(n, signal, sig_freq, FFTW_ESTIMATE);
     fftw_plan fwd_kernel = fftw_plan_dft_r2c_1d(n, kernel, ker_freq, FFTW_ESTIMATE);
@@ -27,6 +27,6 @@ void convolve_fft(double *signal, double *kernel, double *result, int n) {
     fftw_destroy_plan(fwd_signal);
     fftw_destroy_plan(fwd_kernel);
     fftw_destroy_plan(inv_result);
-    free(sig_freq);
-    free(ker_freq);
+    fftw_free(sig_freq);
+    fftw_free(ker_freq);
 }
