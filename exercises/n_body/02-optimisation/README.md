@@ -45,7 +45,7 @@ In order to check correctness, you will be comparing any new output to the origi
 make && ./nbody && mv final.csv final_og.csv
 ```
 
-## **Task 1a** - Identify a bottleneck with `nsys`
+## Task 1a - Identify a bottleneck with `nsys`
 
 **Try to identify potential bottlenecks in the main loop in `nbody.cu` before running the profiler.** Just from reading the code, can you get a sense of which kernels may dominate? Can you identify data transfers and synchronisation points that may need investigating?
 
