@@ -1,7 +1,7 @@
 # CUDA n-body exercise: presenter and helper notes
 
 These are notes for running and supporting the exercise. The learner
-instructions are in [`nbody_exercise.md`](nbody_exercise.md). Learners work in
+instructions are in the README. Learners work in
 `nbody.cu`; the other source variants are reference material for presenters and
 helpers and should not be presented as alternative starting points.
 
